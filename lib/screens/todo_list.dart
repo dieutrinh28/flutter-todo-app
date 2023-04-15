@@ -11,17 +11,21 @@ class TodoList extends StatefulWidget {
 class TodoListState extends State<TodoList> {
 
   List todoList = [];
-  String newTodo = "";
+  String newTodoTitle = "";
   Stream todoListStream = FirebaseFirestore.instance.collection('todolist').snapshots();
 
 
-  void addTodo() {
-    DocumentReference ref = FirebaseFirestore.instance.collection(
-        "todolist").doc(newTodo);
-    Map<String, String> todoList = {
-      "title": newTodo
-    };
-    ref.set(todoList).whenComplete(() => print("$newTodo created"));
+  Future<void> createTodo() async {
+    try {
+      await FirebaseFirestore.instance.collection('todolist').add(
+        {
+          'title': newTodoTitle,
+        }
+      );
+    }
+    catch (e) {
+      print(e);
+    }
   }
 
   void onAddTodoClick() {
@@ -35,14 +39,15 @@ class TodoListState extends State<TodoList> {
             title: Text('New todo'),
             content: TextField(
               onChanged: (String value) {
-                newTodo = value;
+                newTodoTitle = value;
               },
             ),
             actions: <Widget>[
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
+                  await createTodo();
                   setState(() {
-                    todoList.add(newTodo);
+                    todoList.add(newTodoTitle);
                   });
                   Navigator.of(context).pop();
                 },
