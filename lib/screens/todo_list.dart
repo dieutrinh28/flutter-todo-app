@@ -67,7 +67,7 @@ class TodoListState extends State<TodoList> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          title: const Text('Edit todo'),
+          title: const Text('Edit task'),
           content: TextField(
             onChanged: (String value) {
               newTitle = value;
@@ -101,121 +101,179 @@ class TodoListState extends State<TodoList> {
     TodoManager.deleteTodo(id);
   }
 
+  void searchTodo(String searchTitle) {
+    bool isSearching = false;
+    if (searchTitle.isEmpty) {
+      setState(() {
+        isSearching = false;
+        todoListStream = TodoManager.getTodoList();
+      });
+    } else {
+      setState(() {
+        isSearching = true;
+        todoListStream = TodoManager.searchTodoByTitle(searchTitle);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Todo list'),
-        centerTitle: true,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: const [
+            Icon(
+              Icons.menu,
+              size: 30,
+            ),
+            SizedBox(
+              height: 40,
+              width: 40,
+              child: CircleAvatar(
+                child: Icon(Icons.person),
+              ),
+            )
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: onAddTodoClick,
         label: const Text('Add todo'),
       ),
-      body: StreamBuilder(
-        stream: todoListStream,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: Text("Loading"));
-          }
-          return ListView.builder(
-            itemCount: snapshot.data?.docs.length,
-            padding: const EdgeInsets.all(12),
-            itemBuilder: (BuildContext context, int index) {
-              final document = snapshot.data?.docs[index];
-
-              String title = document['title'];
-              bool isCompleted = document['isCompleted'];
-
-              return Dismissible(
-                key: Key(document.id),
-                direction: DismissDirection.horizontal,
-                background: Container(
-
-                ),
-                secondaryBackground: Container(
-                  alignment: AlignmentDirectional.centerEnd,
-                  padding: const EdgeInsets.only(right: 16),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.red,
+      body: Container(
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              margin: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TextField(
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 20,
                   ),
+                  hintText: 'Search',
+                  border: InputBorder.none,
                 ),
-                child: Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  margin: const EdgeInsets.all(8),
-                  child: ListTile(
-                    leading: Checkbox(
-                      activeColor: Colors.transparent,
-                      checkColor: Colors.cyanAccent,
-                      shape: const CircleBorder(),
-                      value: isCompleted,
-                      onChanged: (bool? value) async {
-                        await FirebaseFirestore.instance
-                            .collection('todolist')
-                            .doc(document.id)
-                            .update({'isCompleted': value ?? false});
-                        setState(() {});
-                      },
-                    ),
-                    title: Text(
-                      title,
-                      style: TextStyle(
-                        decoration: (isCompleted == true)
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                      ),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () {
-                        onEditTodoClick(
-                          context,
-                          document.id,
-                          title,
-                          isCompleted,
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                onDismissed: (direction) {
-                  setState(() {
-                    onRemoveClick(context, document.id);
-                  });
+                onChanged: (value) {
+                  searchTodo(value);
                 },
-                confirmDismiss: (direction) async {
-                  return await showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text("Confirm"),
-                        content: const Text(
-                            "Are you sure you wish to delete this item?"),
-                        actions: <Widget>[
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text("Cancel"),
+              ),
+            ),
+            Expanded(
+              child: StreamBuilder(
+                stream: todoListStream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(child: Text('Something went wrong'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  return ListView.builder(
+                    itemCount: snapshot.data?.docs.length,
+                    padding: const EdgeInsets.all(12),
+                    itemBuilder: (BuildContext context, int index) {
+                      final document = snapshot.data?.docs[index];
+                      String title = document['title'];
+                      bool isCompleted = document['isCompleted'];
+
+                      return Dismissible(
+                        key: Key(document.id),
+                        direction: DismissDirection.horizontal,
+                        background: Container(),
+                        secondaryBackground: Container(
+                          alignment: AlignmentDirectional.centerEnd,
+                          padding: const EdgeInsets.only(right: 16),
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.red,
                           ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            child: const Text("Delete"),
+                        ),
+                        child: Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
+                          margin: const EdgeInsets.all(8),
+                          child: ListTile(
+                            leading: Checkbox(
+                              activeColor: Colors.transparent,
+                              checkColor: Colors.cyanAccent,
+                              shape: const CircleBorder(),
+                              value: isCompleted,
+                              onChanged: (bool? value) async {
+                                await FirebaseFirestore.instance
+                                    .collection('todolist')
+                                    .doc(document.id)
+                                    .update({'isCompleted': value ?? false});
+                                setState(() {});
+                              },
+                            ),
+                            title: Text(
+                              title,
+                              style: TextStyle(
+                                decoration: (isCompleted == true)
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () {
+                                onEditTodoClick(
+                                  context,
+                                  document.id,
+                                  title,
+                                  isCompleted,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        onDismissed: (direction) {
+                          setState(() {
+                            onRemoveClick(context, document.id);
+                          });
+                        },
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text("Confirm"),
+                                content: const Text(
+                                    "Are you sure you wish to delete this item?"),
+                                actions: <Widget>[
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text("Delete"),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
                       );
                     },
                   );
                 },
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

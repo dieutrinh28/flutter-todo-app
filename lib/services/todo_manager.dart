@@ -1,9 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TodoManager {
-
   static Stream getTodoList() {
-   return FirebaseFirestore.instance.collection('todolist').snapshots();
+    return FirebaseFirestore.instance.collection('todolist').snapshots();
   }
 
   static Future<void> createTodo(String newTitle) async {
@@ -17,7 +16,8 @@ class TodoManager {
     }
   }
 
-  static Future<void> updateTodo(String id, String newTitle, bool isCompleted) async {
+  static Future<void> updateTodo(
+      String id, String newTitle, bool isCompleted) async {
     try {
       await FirebaseFirestore.instance.collection('todolist').doc(id).update({
         'title': newTitle,
@@ -34,5 +34,13 @@ class TodoManager {
     } catch (e) {
       print(e);
     }
+  }
+
+  static Stream searchTodoByTitle(String searchTitle) {
+    return FirebaseFirestore.instance
+        .collection('todolist')
+        .where('title', isGreaterThanOrEqualTo: searchTitle)
+        .where('title', isLessThan: searchTitle + 'z')
+        .snapshots();
   }
 }
