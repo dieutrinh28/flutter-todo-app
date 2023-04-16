@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:todo_app/services/todo_manager.dart';
 
 class TodoList extends StatefulWidget {
   const TodoList({Key? key}) : super(key: key);
@@ -10,38 +11,7 @@ class TodoList extends StatefulWidget {
 
 class TodoListState extends State<TodoList> {
   List todoList = [];
-  Stream todoListStream =
-      FirebaseFirestore.instance.collection('todolist').snapshots();
-
-  Future<void> createTodo(String newTitle) async {
-    try {
-      await FirebaseFirestore.instance.collection('todolist').add({
-        'title': newTitle,
-        'isCompleted': false,
-      });
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> updateTodo(String id, String newTitle, bool isCompleted) async {
-    try {
-      await FirebaseFirestore.instance.collection('todolist').doc(id).update({
-        'title': newTitle,
-        'isCompleted': isCompleted,
-      });
-    } catch (e) {
-      print(e);
-    }
-  }
-
-  Future<void> deleteTodo(String id) async {
-    try {
-      await FirebaseFirestore.instance.collection('todolist').doc(id).delete();
-    } catch (e) {
-      print(e);
-    }
-  }
+  Stream todoListStream = TodoManager.getTodoList();
 
   void onAddTodoClick() {
     String newTitle = "";
@@ -66,7 +36,7 @@ class TodoListState extends State<TodoList> {
                 ),
               ),
               onPressed: () async {
-                await createTodo(newTitle);
+                await TodoManager.createTodo(newTitle);
                 setState(() {
                   todoList.add(newTitle);
                 });
@@ -112,7 +82,7 @@ class TodoListState extends State<TodoList> {
                 ),
               ),
               onPressed: () async {
-                await updateTodo(id, newTitle, isCompleted);
+                await TodoManager.updateTodo(id, newTitle, isCompleted);
                 Navigator.of(context).pop();
               },
               child: const Text(
@@ -128,7 +98,7 @@ class TodoListState extends State<TodoList> {
   }
 
   void onRemoveClick(BuildContext context, String id) async {
-    deleteTodo(id);
+    TodoManager.deleteTodo(id);
   }
 
   @override
@@ -152,7 +122,6 @@ class TodoListState extends State<TodoList> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: Text("Loading"));
           }
-          List<DocumentSnapshot> documents = snapshot.data.docs;
           return ListView.builder(
             itemCount: snapshot.data?.docs.length,
             padding: const EdgeInsets.all(12),
@@ -170,8 +139,8 @@ class TodoListState extends State<TodoList> {
                 ),
                 secondaryBackground: Container(
                   alignment: AlignmentDirectional.centerEnd,
-                  padding: EdgeInsets.only(right: 16),
-                  child: Icon(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: const Icon(
                     Icons.delete,
                     color: Colors.red,
                   ),
